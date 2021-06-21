@@ -76,6 +76,37 @@ int no_effaceable_patch (FILE *fp,size_t dtree_len,void* dtree_buf) {
     return 1;
 }
 
+int preboot_role_8002_patch (FILE *fp,size_t dtree_len,void* dtree_buf) {
+    printf("preboot_role_8002_patch:\n");
+    void* fstab_loc = memstr(dtree_buf, dtree_len, "fstab");
+    if(!fstab_loc) {
+        printf("Failed to find fstab string\n");
+        return -1;
+    }
+    printf("Found fstab string at %p\n",GET_OFFSET(dtree_len, fstab_loc));
+    void* system_loc = memstr(fstab_loc, dtree_len, "System");
+    if(!system_loc) {
+        printf("Failed to find System string\n");
+        return -1;
+    }
+    printf("Found System string at %p\n",GET_OFFSET(dtree_len, system_loc));
+    void* preboot_role_str_loc = memstr(system_loc, dtree_len, "vol.fs_role");
+    if(!preboot_role_str_loc) {
+        printf("Failed to find Preboot role string loc string\n");
+        return -1;
+    }
+    void* preboot_role = memstr(preboot_role_str_loc, dtree_len, "\x10\x00");
+    if(!preboot_role) {
+        printf("Failed to find Preboot role loc string\n");
+        return -1;
+    }
+    printf("Found Preboot role at %p\n",GET_OFFSET(dtree_len, preboot_role));
+    printf("Changing Preboot role to 0x8002\n");
+    memcpy(preboot_role,"\x80\x02",0x2);
+    return 1;
+
+}
+
 int data_role_0_patch (FILE *fp,size_t dtree_len,void* dtree_buf) {
     printf("data_role_0_patch:\n");
     void* fstab_loc = memstr(dtree_buf, dtree_len, "fstab");
@@ -115,6 +146,7 @@ int main(int argc, char **argv){
         printf("Usage: %s <dtree_in> <dtree_out> <args>\n",argv[0]);
         printf("\t-n\t\tAdd no-effaceable-storage property\n");
         printf("\t-d\t\tChange data volume role to 0x0\n");
+        printf("\t-p\t\tChange Preboot volume role to 'D' (0x8002)\n");
         return 0;
     }
     
@@ -154,6 +186,9 @@ int main(int argc, char **argv){
         }
         if(strcmp(argv[i], "-d") == 0) {
             data_role_0_patch(fp,dtree_len,dtree_buf);
+        }
+        if(strcmp(argv[i], "-p") == 0) {
+            preboot_role_8002_patch(fp,dtree_len,dtree_buf);
         }
     }
     
