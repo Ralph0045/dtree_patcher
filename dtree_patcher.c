@@ -138,6 +138,38 @@ int data_role_0_patch (FILE *fp,size_t dtree_len,void* dtree_buf) {
     
 }
 
+int mount_as_rw (FILE *fp,size_t dtree_len,void* dtree_buf) {
+    printf("mount_as_rw :\n");
+    void* fstab_loc = memstr(dtree_buf, dtree_len, "fstab");
+    if(!fstab_loc) {
+        printf("Failed to find fstab string\n");
+        return -1;
+    }
+    printf("Found fstab string at %p\n",GET_OFFSET(dtree_len, fstab_loc));
+    void* xart_loc = memstr(fstab_loc, dtree_len, "xART");
+    if(!xart_loc) {
+        printf("Failed to find xART string\n");
+        return -1;
+    }
+    printf("Found System string at %p\n",GET_OFFSET(dtree_len, xart_loc));
+    void* xart_mount_str_loc = memstr(xart_loc, dtree_len, "vol.fs_type");
+    if(!xart_mount_str_loc) {
+        printf("Failed to find data role string loc string\n");
+        return -1;
+    }
+    void* data_role = memstr(xart_mount_str_loc, dtree_len, "\x72\x6f");
+    if(!data_role) {
+        printf("Failed to find mount ro\n");
+        return -1;
+    }
+    printf("Found mount ro at %p\n",GET_OFFSET(dtree_len, data_role));
+    printf("Changing mount as 0x7277\n");
+    memcpy(data_role,"\x72\x77",0x2);
+    return 1;
+    
+}
+
+
 int main(int argc, char **argv){
     
     FILE* fp = NULL;
@@ -147,6 +179,7 @@ int main(int argc, char **argv){
         printf("\t-n\t\tAdd no-effaceable-storage property\n");
         printf("\t-d\t\tChange data volume role to 0x0\n");
         printf("\t-p\t\tChange Preboot volume role to 'D' (0x8002)\n");
+        printf("\t-o\t\tChange System mount as a ro to rw \n");
         return 0;
     }
     
@@ -189,6 +222,9 @@ int main(int argc, char **argv){
         }
         if(strcmp(argv[i], "-p") == 0) {
             preboot_role_8002_patch(fp,dtree_len,dtree_buf);
+        }
+        if(strcmp(argv[i], "-o") == 0) {
+            mount_as_rw(fp,dtree_len,dtree_buf);
         }
     }
     
